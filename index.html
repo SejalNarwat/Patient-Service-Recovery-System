@@ -1,0 +1,1901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patient Service Recovery System — IBM Bob</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f0f4f8;
+      --surface: #ffffff;
+      --surface2: #f7f9fb;
+      --border: #dde3ec;
+      --text: #1a2332;
+      --muted: #5a6a7e;
+      --accent: #1a56db;
+      --accent-light: #e8f0fe;
+      --critical: #c0392b;
+      --critical-bg: #fdf0ef;
+      --high: #d35400;
+      --high-bg: #fef5ec;
+      --medium: #d4a017;
+      --medium-bg: #fefce8;
+      --low: #27ae60;
+      --low-bg: #edfaef;
+      --positive: #27ae60;
+      --negative: #c0392b;
+      --neutral: #7f8c8d;
+      --p1: #c0392b;
+      --p2: #d35400;
+      --p3: #d4a017;
+      --p4: #27ae60;
+      --sidebar-w: 240px;
+      --header-h: 64px;
+      --radius: 8px;
+      --shadow: 0 1px 4px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+    }
+    html { font-size: 15px; }
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ===== LAYOUT ===== */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: #0f1b2d;
+      color: #c9d4e0;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid #1e2f45;
+    }
+    .sidebar-logo h1 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.3;
+    }
+    .sidebar-logo p { font-size: 0.72rem; color: #7a90a8; margin-top: 2px; }
+    .sidebar-logo .ibm-badge {
+      display: inline-block;
+      background: #1a56db;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-top: 5px;
+      letter-spacing: 0.5px;
+    }
+    .sidebar-nav { flex: 1; padding: 10px 0; overflow-y: auto; }
+    .nav-section-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #4a6080;
+      padding: 10px 20px 4px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      cursor: pointer;
+      border-radius: 0;
+      transition: background 0.15s;
+      font-size: 0.875rem;
+      color: #a0b4c8;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { background: #1a2d45; color: #dce8f5; }
+    .nav-item.active {
+      background: #152440;
+      color: #ffffff;
+      border-left-color: #1a56db;
+    }
+    .nav-item .icon { font-size: 1rem; width: 20px; text-align: center; }
+    .sidebar-footer {
+      padding: 14px 20px;
+      border-top: 1px solid #1e2f45;
+      font-size: 0.72rem;
+      color: #4a6080;
+    }
+    .granite-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+    }
+    .granite-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #e74c3c;
+      flex-shrink: 0;
+    }
+    .granite-dot.on { background: #27ae60; }
+
+    /* ===== MAIN CONTENT ===== */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* ===== TOP BAR ===== */
+    .topbar {
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .topbar-title { font-size: 1.1rem; font-weight: 600; flex: 1; }
+    .topbar-title span { color: var(--muted); font-weight: 400; font-size: 0.9rem; margin-left: 8px; }
+    .btn {
+      padding: 7px 16px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #1347c4; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-danger { background: #fdf0ef; color: var(--critical); border: 1px solid #f5c6c3; }
+    .btn-danger:hover { background: var(--critical); color: #fff; }
+    .btn-success { background: #edfaef; color: var(--positive); border: 1px solid #b7e4c3; }
+    .btn-success:hover { background: var(--positive); color: #fff; }
+    .btn-sm { padding: 4px 10px; font-size: 0.78rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ===== PAGE CONTENT ===== */
+    .page { display: none; padding: 24px 28px; }
+    .page.active { display: block; }
+
+    /* ===== STATS CARDS ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .stat-card .label { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card .value { font-size: 2rem; font-weight: 800; margin: 4px 0 2px; line-height: 1; }
+    .stat-card .sublabel { font-size: 0.75rem; color: var(--muted); }
+    .stat-card.critical .value { color: var(--critical); }
+    .stat-card.high .value { color: var(--high); }
+    .stat-card.medium .value { color: var(--medium); }
+    .stat-card.good .value { color: var(--positive); }
+    .stat-card.accent .value { color: var(--accent); }
+
+    /* ===== SECTION / CARD ===== */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+    }
+    .card-header h3 { font-size: 0.9rem; font-weight: 700; }
+    .card-body { padding: 20px; }
+
+    /* ===== TABLE ===== */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f5f8ff; }
+    .truncate { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ===== BADGES ===== */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-critical { background: var(--critical-bg); color: var(--critical); border: 1px solid #f5c6c3; }
+    .badge-high { background: var(--high-bg); color: var(--high); border: 1px solid #fcd8b0; }
+    .badge-medium { background: var(--medium-bg); color: var(--medium); border: 1px solid #fde89a; }
+    .badge-low { background: var(--low-bg); color: var(--low); border: 1px solid #b7e4c3; }
+    .badge-positive { background: var(--low-bg); color: var(--positive); border: 1px solid #b7e4c3; }
+    .badge-negative { background: var(--critical-bg); color: var(--critical); border: 1px solid #f5c6c3; }
+    .badge-neutral { background: #f2f3f5; color: var(--neutral); border: 1px solid #d5d8dc; }
+    .badge-p1 { background: var(--critical-bg); color: var(--p1); border: 1px solid #f5c6c3; }
+    .badge-p2 { background: var(--high-bg); color: var(--p2); border: 1px solid #fcd8b0; }
+    .badge-p3 { background: var(--medium-bg); color: var(--p3); border: 1px solid #fde89a; }
+    .badge-p4 { background: var(--low-bg); color: var(--p4); border: 1px solid #b7e4c3; }
+    .badge-approved { background: var(--low-bg); color: var(--positive); border: 1px solid #b7e4c3; }
+    .badge-rejected { background: var(--critical-bg); color: var(--critical); border: 1px solid #f5c6c3; }
+    .badge-pending { background: #f0f4f8; color: var(--muted); border: 1px solid var(--border); }
+    .badge-modified { background: var(--accent-light); color: var(--accent); border: 1px solid #b3d0f5; }
+    .badge-escalation { background: #fdf0ef; color: var(--critical); border: 1px solid #f5c6c3; }
+
+    /* ===== CHARTS ===== */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+    .chart-bar-wrap { padding: 4px 0; }
+    .chart-bar-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px;
+      font-size: 0.8rem;
+    }
+    .chart-bar-label { width: 160px; flex-shrink: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chart-bar-track { flex: 1; height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+    .chart-bar-fill { height: 100%; border-radius: 5px; background: var(--accent); transition: width 0.6s ease; }
+    .chart-bar-count { width: 28px; text-align: right; font-weight: 700; color: var(--text); font-size: 0.8rem; }
+    .donut-wrap { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
+    .donut-legend { font-size: 0.8rem; }
+    .donut-legend-item { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+    .donut-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ===== PIPELINE PROGRESS ===== */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .pipeline-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 0;
+      flex-shrink: 0;
+    }
+    .pipeline-step:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+    .pipeline-step:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+    .pipeline-step .step-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .pipeline-step.done .step-num { background: var(--positive); color: #fff; }
+    .pipeline-step.active-step .step-num { background: var(--accent); color: #fff; }
+    .pipeline-arrow { color: var(--muted); font-size: 0.8rem; padding: 0 2px; flex-shrink: 0; }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: 10px;
+      width: 100%;
+      max-width: 740px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-md);
+    }
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 10;
+    }
+    .modal-header h2 { font-size: 1rem; font-weight: 700; }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 0;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .modal-body { padding: 20px 24px; }
+    .modal-footer {
+      padding: 14px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      background: var(--surface2);
+    }
+
+    /* ===== DETAIL SECTIONS ===== */
+    .detail-section { margin-bottom: 20px; }
+    .detail-section h4 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .detail-grid { grid-template-columns: 1fr; } }
+    .detail-field label { display: block; font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 3px; }
+    .detail-field .val { font-size: 0.875rem; }
+    .feedback-text-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: var(--text);
+      font-style: italic;
+    }
+    .escalation-banner {
+      background: var(--critical-bg);
+      border: 1px solid #f5c6c3;
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--critical);
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .empathy-box {
+      background: var(--accent-light);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      color: #1a3a70;
+      font-style: italic;
+      line-height: 1.6;
+    }
+
+    /* ===== REVIEW FORM ===== */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 5px; color: var(--text); }
+    .form-group select, .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+    .form-group select:focus, .form-group input:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+
+    /* ===== TOAST ===== */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      background: var(--text);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      box-shadow: var(--shadow-md);
+      animation: slideIn 0.25s ease;
+      max-width: 340px;
+    }
+    .toast.success { background: #1e7e34; }
+    .toast.error { background: #9b1f1f; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* ===== LOADING ===== */
+    .loading { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 0.9rem; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 1rem; margin-bottom: 6px; color: var(--text); }
+    .empty-state p { font-size: 0.85rem; }
+
+    /* ===== ALERT ===== */
+    .alert {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+      border: 1px solid;
+    }
+    .alert-info { background: var(--accent-light); border-color: #b3d0f5; color: #1a3a70; }
+    .alert-warning { background: var(--high-bg); border-color: #fcd8b0; color: #7a3500; }
+    .alert-success { background: var(--low-bg); border-color: #b7e4c3; color: #1a5c30; }
+
+    /* ===== REPORT ===== */
+    .report-section { margin-bottom: 24px; }
+    .report-section h4 { font-size: 0.875rem; font-weight: 700; margin-bottom: 12px; }
+    .kv-list dt { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+    .kv-list dd { font-size: 0.875rem; margin-bottom: 8px; padding-left: 0; }
+    .limitation-list { list-style: none; padding: 0; }
+    .limitation-list li {
+      padding: 7px 0 7px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem;
+      color: var(--muted);
+      position: relative;
+    }
+    .limitation-list li::before { content: "→"; position: absolute; left: 0; color: var(--accent); }
+    .limitation-list li:last-child { border-bottom: none; }
+
+    /* ===== TABS ===== */
+    .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
+    .tab-btn {
+      padding: 8px 18px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-btn:hover { color: var(--text); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .main { margin-left: 0; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ===== SIDEBAR ===== -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <h1>🏥 Patient Service Recovery</h1>
+      <p>Agentic AI System</p>
+      <span class="ibm-badge">IBM BOB · IBM GRANITE</span>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard', this)">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-section-label">Pipeline</div>
+      <div class="nav-item" data-page="pipeline" onclick="navigate('pipeline', this)">
+        <span class="icon">⚙️</span> Run Pipeline
+      </div>
+      <div class="nav-section-label">Agents</div>
+      <div class="nav-item" data-page="feedback" onclick="navigate('feedback', this)">
+        <span class="icon">💬</span> Feedback Data
+      </div>
+      <div class="nav-item" data-page="analysis" onclick="navigate('analysis', this)">
+        <span class="icon">🔬</span> Analysis Results
+      </div>
+      <div class="nav-item" data-page="risks" onclick="navigate('risks', this)">
+        <span class="icon">⚠️</span> Risk Flags
+      </div>
+      <div class="nav-item" data-page="priorities" onclick="navigate('priorities', this)">
+        <span class="icon">📋</span> Priority Cases
+      </div>
+      <div class="nav-item" data-page="recovery" onclick="navigate('recovery', this)">
+        <span class="icon">💡</span> Recovery Plans
+      </div>
+      <div class="nav-section-label">Review</div>
+      <div class="nav-item" data-page="review" onclick="navigate('review', this)">
+        <span class="icon">👤</span> Human Review
+      </div>
+      <div class="nav-section-label">Reports</div>
+      <div class="nav-item" data-page="report" onclick="navigate('report', this)">
+        <span class="icon">📄</span> Audit Report
+      </div>
+      <div class="nav-item" data-page="audit" onclick="navigate('audit', this)">
+        <span class="icon">🔍</span> Audit Trail
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="granite-status">
+        <div class="granite-dot" id="graniteDot"></div>
+        <span id="graniteStatusText">IBM Granite: Checking...</span>
+      </div>
+      <div style="margin-top:6px; color:#334d66; font-size:0.68rem;">
+        Built with IBM Bob · Agentic AI
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-title" id="pageTitle">
+        Dashboard <span id="pageSubtitle">Overview</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="refreshPage()">↻ Refresh</button>
+      <button class="btn btn-primary btn-sm" onclick="navigate('pipeline', document.querySelector('[data-page=pipeline]'))">
+        ▶ Run Pipeline
+      </button>
+    </div>
+
+    <!-- ===== DASHBOARD PAGE ===== -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid" id="dashStats">
+        <div class="loading"><div class="spinner"></div>Loading...</div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-header"><h3>📊 Feedback by Category</h3></div>
+          <div class="card-body">
+            <div class="chart-bar-wrap" id="chartCategory">
+              <div class="loading"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>⚡ Risk Level Distribution</h3></div>
+          <div class="card-body">
+            <div class="donut-wrap" id="chartRisk">
+              <div class="loading"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-header"><h3>💬 Sentiment Distribution</h3></div>
+          <div class="card-body">
+            <div class="donut-wrap" id="chartSentiment">
+              <div class="loading"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>📋 Priority Distribution</h3></div>
+          <div class="card-body">
+            <div class="chart-bar-wrap" id="chartPriority">
+              <div class="loading"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <strong>🤖 IBM Bob Note:</strong> All AI analysis is rule-based and designed to assist human reviewers.
+        No clinical decisions are made by the system. All recovery plans require human approval before action.
+      </div>
+    </div>
+
+    <!-- ===== PIPELINE PAGE ===== -->
+    <div class="page" id="page-pipeline">
+      <div class="card">
+        <div class="card-header"><h3>⚙️ Multi-Agent Pipeline</h3></div>
+        <div class="card-body">
+          <p style="margin-bottom:20px; color:var(--muted); font-size:0.875rem;">
+            Click <strong>Run Full Pipeline</strong> to process all 40 synthetic patient feedback records through all AI agents.
+            The pipeline is idempotent — running it again will skip already-processed records.
+          </p>
+
+          <div class="pipeline">
+            <div class="pipeline-step" id="step1">
+              <span class="step-num">1</span> Data Preparation
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-step" id="step2">
+              <span class="step-num">2</span> Feedback Analysis
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-step" id="step3">
+              <span class="step-num">3</span> Risk Identification
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-step" id="step4">
+              <span class="step-num">4</span> Prioritisation
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-step" id="step5">
+              <span class="step-num">5</span> Recovery Planning
+            </div>
+          </div>
+
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <button class="btn btn-primary" id="runPipelineBtn" onclick="runPipeline()">
+              ▶ Run Full Pipeline
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="resetDatabase()">
+              🗑 Reset Database
+            </button>
+          </div>
+
+          <div id="pipelineResult" style="margin-top:20px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>ℹ️ Agent Descriptions</h3></div>
+        <div class="card-body">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div>
+              <strong style="font-size:0.85rem;">1. Data Preparation Agent</strong>
+              <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;">
+                Scans all 40 records for missing fields, duplicate IDs, and suspiciously short text. Tags each record with quality flags.
+              </p>
+            </div>
+            <div>
+              <strong style="font-size:0.85rem;">2. Feedback Analysis Agent</strong>
+              <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;">
+                Classifies feedback into 8 categories, detects sentiment, extracts themes, and generates a concise summary. IBM Granite enhances summaries when available.
+              </p>
+            </div>
+            <div>
+              <strong style="font-size:0.85rem;">3. Risk Identification Agent</strong>
+              <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;">
+                Flags safety concerns, repeated failures, ambiguous feedback, and high-impact service failures. Triggers escalation for Critical/High risks.
+              </p>
+            </div>
+            <div>
+              <strong style="font-size:0.85rem;">4. Prioritisation Agent</strong>
+              <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;">
+                Scores each case P1–P4 using risk level, department criticality, sentiment, and keyword boosters. Provides transparent rationale for every score.
+              </p>
+            </div>
+            <div>
+              <strong style="font-size:0.85rem;">5. Recovery Planning Agent</strong>
+              <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;">
+                Generates empathetic, department-specific recovery actions with responsible roles, follow-up steps, and timelines. IBM Granite personalises empathy statements.
+              </p>
+            </div>
+            <div>
+              <strong style="font-size:0.85rem;">Human Review (HITL)</strong>
+              <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;">
+                All plans are held in <em>Pending Review</em> until a human reviewer approves, rejects, or modifies them. No action proceeds without human sign-off.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== FEEDBACK PAGE ===== -->
+    <div class="page" id="page-feedback">
+      <div class="card">
+        <div class="card-header">
+          <h3>💬 Patient Feedback Records</h3>
+          <span id="feedbackCount" style="font-size:0.8rem; color:var(--muted);"></span>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table id="feedbackTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Date</th>
+                  <th>Department</th>
+                  <th>Feedback</th>
+                  <th>Method</th>
+                  <th>Quality</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="feedbackBody">
+                <tr><td colspan="7"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ANALYSIS PAGE ===== -->
+    <div class="page" id="page-analysis">
+      <div class="card">
+        <div class="card-header"><h3>🔬 Feedback Analysis Results</h3></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table id="analysisTable">
+              <thead>
+                <tr>
+                  <th>Feedback ID</th>
+                  <th>Category</th>
+                  <th>Sentiment</th>
+                  <th>Themes</th>
+                  <th>Summary</th>
+                  <th>Confidence</th>
+                  <th>Granite</th>
+                  <th>View</th>
+                </tr>
+              </thead>
+              <tbody id="analysisBody">
+                <tr><td colspan="8"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RISKS PAGE ===== -->
+    <div class="page" id="page-risks">
+      <div class="card">
+        <div class="card-header"><h3>⚠️ Risk Flags</h3></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table id="risksTable">
+              <thead>
+                <tr>
+                  <th>Feedback ID</th>
+                  <th>Risk Level</th>
+                  <th>Risk Type</th>
+                  <th>Description</th>
+                  <th>Escalation</th>
+                  <th>View</th>
+                </tr>
+              </thead>
+              <tbody id="risksBody">
+                <tr><td colspan="6"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PRIORITIES PAGE ===== -->
+    <div class="page" id="page-priorities">
+      <div class="card">
+        <div class="card-header"><h3>📋 Priority Cases</h3></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table id="prioritiesTable">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Feedback ID</th>
+                  <th>Priority</th>
+                  <th>Score</th>
+                  <th>Department</th>
+                  <th>Rationale</th>
+                  <th>View</th>
+                </tr>
+              </thead>
+              <tbody id="prioritiesBody">
+                <tr><td colspan="7"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RECOVERY PAGE ===== -->
+    <div class="page" id="page-recovery">
+      <div class="card">
+        <div class="card-header"><h3>💡 Recovery Plans</h3></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table id="recoveryTable">
+              <thead>
+                <tr>
+                  <th>Feedback ID</th>
+                  <th>Status</th>
+                  <th>Responsible Role</th>
+                  <th>Timeline</th>
+                  <th>Action Summary</th>
+                  <th>View / Review</th>
+                </tr>
+              </thead>
+              <tbody id="recoveryBody">
+                <tr><td colspan="6"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== HUMAN REVIEW PAGE ===== -->
+    <div class="page" id="page-review">
+      <div class="alert alert-warning">
+        <strong>⚠️ Human-in-the-Loop Gate:</strong>
+        All AI-generated recovery plans must be reviewed and approved by an authorised reviewer before any action is taken.
+        No patient communication or recovery action may proceed without human sign-off.
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>👤 Pending Human Review</h3></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table id="reviewTable">
+              <thead>
+                <tr>
+                  <th>Feedback ID</th>
+                  <th>Department</th>
+                  <th>Priority</th>
+                  <th>Risk</th>
+                  <th>Plan Status</th>
+                  <th>Review</th>
+                </tr>
+              </thead>
+              <tbody id="reviewBody">
+                <tr><td colspan="6"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>✅ Completed Reviews</h3></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Feedback ID</th>
+                  <th>Reviewer</th>
+                  <th>Decision</th>
+                  <th>Notes</th>
+                  <th>Reviewed At</th>
+                </tr>
+              </thead>
+              <tbody id="completedReviewBody">
+                <tr><td colspan="5"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== REPORT PAGE ===== -->
+    <div class="page" id="page-report">
+      <div id="reportContent">
+        <div class="loading"><div class="spinner"></div>Loading report...</div>
+      </div>
+    </div>
+
+    <!-- ===== AUDIT PAGE ===== -->
+    <div class="page" id="page-audit">
+      <div class="card">
+        <div class="card-header"><h3>🔍 Audit Trail (Last 200 actions)</h3></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Feedback ID</th>
+                  <th>Agent</th>
+                  <th>Action</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="auditBody">
+                <tr><td colspan="5"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .main -->
+</div><!-- end .layout -->
+
+<!-- ===== CASE DETAIL MODAL ===== -->
+<div class="modal-overlay" id="caseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2 id="modalTitle">Case Details</h2>
+        <div id="modalBadges" style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('caseModal')">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody">Loading...</div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- ===== REVIEW MODAL ===== -->
+<div class="modal-overlay" id="reviewModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2>Human Review Decision</h2>
+        <p style="font-size:0.8rem; color:var(--muted); margin-top:4px;" id="reviewModalSubtitle"></p>
+      </div>
+      <button class="modal-close" onclick="closeModal('reviewModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warning" style="margin-bottom:16px;">
+        Review the AI-generated recovery plan below before making your decision.
+        Your approval is required before any action proceeds.
+      </div>
+      <div id="reviewPlanPreview" style="margin-bottom:20px;"></div>
+      <form id="reviewForm" onsubmit="submitReview(event)">
+        <input type="hidden" id="reviewFeedbackId" />
+        <div class="form-group">
+          <label>Reviewer Name *</label>
+          <input type="text" id="reviewerName" placeholder="Enter your name" required />
+        </div>
+        <div class="form-group">
+          <label>Decision *</label>
+          <select id="reviewDecision" required onchange="onDecisionChange()">
+            <option value="">— Select decision —</option>
+            <option value="Approved">✅ Approved — Proceed with AI-generated plan</option>
+            <option value="Modified">✏️ Modified — Proceed with my changes</option>
+            <option value="Rejected">❌ Rejected — Do not proceed</option>
+          </select>
+        </div>
+        <div class="form-group" id="modifiedActionGroup" style="display:none;">
+          <label>Modified Recovery Action</label>
+          <textarea id="modifiedAction" rows="4" placeholder="Enter your modified action plan..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Reviewer Notes</label>
+          <textarea id="reviewerNotes" rows="3" placeholder="Optional: add any comments, concerns, or observations..."></textarea>
+        </div>
+        <div class="modal-footer" style="padding: 0; border:none; background:none; margin-top:8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('reviewModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit Review</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  // ===== STATE =====
+  const API = '';
+  let currentPage = 'dashboard';
+  let allFeedback = [];
+  let allAnalysis = [];
+  let allRisks = [];
+  let allPriorities = [];
+  let allRecovery = [];
+  let allReviews = [];
+
+  // ===== NAVIGATION =====
+  function navigate(page, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    if (el) el.classList.add('active');
+    currentPage = page;
+    const titles = {
+      dashboard: ['Dashboard', 'Overview'],
+      pipeline: ['Run Pipeline', 'Multi-Agent Workflow'],
+      feedback: ['Feedback Data', 'Patient Feedback Records'],
+      analysis: ['Analysis Results', 'Feedback Analysis Agent'],
+      risks: ['Risk Flags', 'Risk Identification Agent'],
+      priorities: ['Priority Cases', 'Prioritisation Agent'],
+      recovery: ['Recovery Plans', 'Recovery Planning Agent'],
+      review: ['Human Review', 'Human-in-the-Loop Gate'],
+      report: ['Audit Report', 'Consolidated Report'],
+      audit: ['Audit Trail', 'Agent Action Log'],
+    };
+    const [t, s] = titles[page] || [page, ''];
+    document.getElementById('pageTitle').innerHTML = `${t} <span>${s}</span>`;
+    loadPage(page);
+  }
+
+  function refreshPage() { loadPage(currentPage); }
+
+  async function loadPage(page) {
+    const loaders = {
+      dashboard: loadDashboard,
+      feedback: loadFeedback,
+      analysis: loadAnalysis,
+      risks: loadRisks,
+      priorities: loadPriorities,
+      recovery: loadRecovery,
+      review: loadReview,
+      report: loadReport,
+      audit: loadAudit,
+    };
+    if (loaders[page]) await loaders[page]();
+  }
+
+  // ===== API HELPERS =====
+  async function apiFetch(path, opts = {}) {
+    const r = await fetch(API + path, opts);
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: r.statusText }));
+      throw new Error(err.detail || r.statusText);
+    }
+    return r.json();
+  }
+
+  // ===== TOAST =====
+  function toast(msg, type = '') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
+
+  // ===== MODALS =====
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  // ===== BADGES =====
+  function riskBadge(level) {
+    const map = { Critical: 'critical', High: 'high', Medium: 'medium', Low: 'low' };
+    return `<span class="badge badge-${map[level] || 'neutral'}">${level || '—'}</span>`;
+  }
+  function sentimentBadge(s) {
+    return `<span class="badge badge-${(s||'').toLowerCase()}">${s || '—'}</span>`;
+  }
+  function priorityBadge(p) {
+    const map = { 'P1-Critical': 'p1', 'P2-High': 'p2', 'P3-Medium': 'p3', 'P4-Low': 'p4' };
+    const cls = map[p] || 'neutral';
+    return `<span class="badge badge-${cls}">${p || '—'}</span>`;
+  }
+  function statusBadge(s) {
+    const map = { Approved: 'approved', Rejected: 'rejected', 'Pending Review': 'pending', Modified: 'modified' };
+    return `<span class="badge badge-${map[s] || 'neutral'}">${s || '—'}</span>`;
+  }
+  function qualityBadge(rec) {
+    if (rec.is_duplicate) return `<span class="badge badge-critical">Duplicate</span>`;
+    if (rec.has_missing_fields) return `<span class="badge badge-high">Incomplete</span>`;
+    return `<span class="badge badge-low">OK</span>`;
+  }
+
+  // ===== DASHBOARD =====
+  async function loadDashboard() {
+    try {
+      const [stats, report] = await Promise.all([
+        apiFetch('/api/dashboard'),
+        apiFetch('/api/report'),
+      ]);
+
+      // Update granite status
+      const dot = document.getElementById('graniteDot');
+      const statusText = document.getElementById('graniteStatusText');
+      if (stats.granite_enabled) {
+        dot.classList.add('on');
+        statusText.textContent = 'IBM Granite: Active';
+      } else {
+        statusText.textContent = 'IBM Granite: Offline';
+      }
+
+      // Stats grid
+      document.getElementById('dashStats').innerHTML = `
+        <div class="stat-card accent">
+          <div class="label">Total Feedback</div>
+          <div class="value">${stats.total_feedback}</div>
+          <div class="sublabel">Records received</div>
+        </div>
+        <div class="stat-card accent">
+          <div class="label">Analysed</div>
+          <div class="value">${stats.records_analysed}</div>
+          <div class="sublabel">By AI agents</div>
+        </div>
+        <div class="stat-card critical">
+          <div class="label">Escalations</div>
+          <div class="value">${stats.requires_escalation}</div>
+          <div class="sublabel">Require urgent review</div>
+        </div>
+        <div class="stat-card ${stats.pending_review > 0 ? 'high' : 'good'}">
+          <div class="label">Pending Review</div>
+          <div class="value">${stats.pending_review}</div>
+          <div class="sublabel">Awaiting human sign-off</div>
+        </div>
+        <div class="stat-card good">
+          <div class="label">Approved</div>
+          <div class="value">${stats.approved_plans}</div>
+          <div class="sublabel">Plans approved</div>
+        </div>
+        <div class="stat-card critical">
+          <div class="label">Critical Risk</div>
+          <div class="value">${stats.risk_counts.Critical}</div>
+          <div class="sublabel">Safety concerns</div>
+        </div>
+        <div class="stat-card high">
+          <div class="label">High Risk</div>
+          <div class="value">${stats.risk_counts.High}</div>
+          <div class="sublabel">Impact failures</div>
+        </div>
+      `;
+
+      // Category chart
+      const cats = report.theme_distribution || {};
+      const maxCat = Math.max(...Object.values(cats), 1);
+      const catColors = {
+        'Appointment Delay': '#1a56db',
+        'Communication Gap': '#7c5cd8',
+        'Scheduling Issue': '#0891b2',
+        'Medication / Safety': '#c0392b',
+        'Care Experience': '#27ae60',
+        'Facility / Access': '#d35400',
+        'Mental Health': '#8b5cf6',
+        'Positive Feedback': '#059669',
+        'General Concern': '#6b7280',
+      };
+      document.getElementById('chartCategory').innerHTML = Object.entries(cats)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, cnt]) => `
+          <div class="chart-bar-row">
+            <div class="chart-bar-label" title="${cat}">${cat}</div>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill" style="width:${(cnt/maxCat*100).toFixed(1)}%; background:${catColors[cat]||'#1a56db'};"></div>
+            </div>
+            <div class="chart-bar-count">${cnt}</div>
+          </div>
+        `).join('') || '<p style="color:var(--muted); text-align:center; padding:20px;">No data. Run pipeline first.</p>';
+
+      // Risk donut
+      const risks = stats.risk_counts;
+      const riskColors = { Critical: '#c0392b', High: '#d35400', Medium: '#d4a017', Low: '#27ae60' };
+      const total = Object.values(risks).reduce((a, b) => a + b, 0);
+      const riskEntries = Object.entries(risks).filter(([, v]) => v > 0);
+
+      if (total > 0) {
+        let cumulAngle = 0;
+        const svgPaths = riskEntries.map(([label, val]) => {
+          const angle = (val / total) * 360;
+          const path = describeArc(50, 50, 35, cumulAngle, cumulAngle + angle);
+          cumulAngle += angle;
+          return `<path d="${path}" fill="${riskColors[label]}" />`;
+        }).join('');
+
+        document.getElementById('chartRisk').innerHTML = `
+          <svg width="110" height="110" viewBox="0 0 100 100">
+            ${svgPaths}
+            <circle cx="50" cy="50" r="20" fill="white" />
+            <text x="50" y="54" text-anchor="middle" font-size="10" font-weight="bold" fill="#1a2332">${total}</text>
+          </svg>
+          <div class="donut-legend">
+            ${riskEntries.map(([label, val]) =>
+              `<div class="donut-legend-item"><div class="donut-dot" style="background:${riskColors[label]}"></div> ${label}: <strong>${val}</strong></div>`
+            ).join('')}
+          </div>`;
+      } else {
+        document.getElementById('chartRisk').innerHTML = '<p style="color:var(--muted); text-align:center; padding:20px;">No data. Run pipeline first.</p>';
+      }
+
+      // Sentiment donut
+      const sents = stats.sentiment_counts;
+      const sentColors = { Negative: '#c0392b', Neutral: '#7f8c8d', Positive: '#27ae60' };
+      const sentTotal = Object.values(sents).reduce((a, b) => a + b, 0);
+      const sentEntries = Object.entries(sents).filter(([, v]) => v > 0);
+
+      if (sentTotal > 0) {
+        let sa = 0;
+        const svgP = sentEntries.map(([label, val]) => {
+          const angle = (val / sentTotal) * 360;
+          const path = describeArc(50, 50, 35, sa, sa + angle);
+          sa += angle;
+          return `<path d="${path}" fill="${sentColors[label]}" />`;
+        }).join('');
+
+        document.getElementById('chartSentiment').innerHTML = `
+          <svg width="110" height="110" viewBox="0 0 100 100">
+            ${svgP}
+            <circle cx="50" cy="50" r="20" fill="white" />
+            <text x="50" y="54" text-anchor="middle" font-size="10" font-weight="bold" fill="#1a2332">${sentTotal}</text>
+          </svg>
+          <div class="donut-legend">
+            ${sentEntries.map(([label, val]) =>
+              `<div class="donut-legend-item"><div class="donut-dot" style="background:${sentColors[label]}"></div> ${label}: <strong>${val}</strong></div>`
+            ).join('')}
+          </div>`;
+      } else {
+        document.getElementById('chartSentiment').innerHTML = '<p style="color:var(--muted); text-align:center; padding:20px;">No data. Run pipeline first.</p>';
+      }
+
+      // Priority chart
+      const pris = report.priority_distribution || {};
+      const priColors = { 'P1-Critical': '#c0392b', 'P2-High': '#d35400', 'P3-Medium': '#d4a017', 'P4-Low': '#27ae60' };
+      const maxPri = Math.max(...Object.values(pris), 1);
+      document.getElementById('chartPriority').innerHTML = Object.entries(pris)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([p, cnt]) => `
+          <div class="chart-bar-row">
+            <div class="chart-bar-label">${p}</div>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill" style="width:${(cnt/maxPri*100).toFixed(1)}%; background:${priColors[p]||'#1a56db'};"></div>
+            </div>
+            <div class="chart-bar-count">${cnt}</div>
+          </div>
+        `).join('') || '<p style="color:var(--muted); text-align:center; padding:20px;">No data. Run pipeline first.</p>';
+
+    } catch (e) {
+      document.getElementById('dashStats').innerHTML = `
+        <div class="alert alert-warning" style="grid-column:1/-1;">
+          Could not load dashboard. Run the pipeline first. (${e.message})
+        </div>`;
+    }
+  }
+
+  // SVG arc helper for donut charts
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    if (endAngle - startAngle >= 360) endAngle = startAngle + 359.99;
+    const toRad = a => (a - 90) * Math.PI / 180;
+    const x1 = cx + r * Math.cos(toRad(startAngle));
+    const y1 = cy + r * Math.sin(toRad(startAngle));
+    const x2 = cx + r * Math.cos(toRad(endAngle));
+    const y2 = cy + r * Math.sin(toRad(endAngle));
+    const large = endAngle - startAngle > 180 ? 1 : 0;
+    return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+  }
+
+  // ===== PIPELINE =====
+  async function runPipeline() {
+    const btn = document.getElementById('runPipelineBtn');
+    const result = document.getElementById('pipelineResult');
+    btn.disabled = true;
+    btn.textContent = '⏳ Running...';
+    result.innerHTML = '';
+
+    // Animate steps
+    ['step1','step2','step3','step4','step5'].forEach((id, i) => {
+      setTimeout(() => {
+        document.getElementById(id).classList.add('active-step');
+      }, i * 600);
+    });
+
+    try {
+      const data = await apiFetch('/api/pipeline/run', { method: 'POST' });
+      ['step1','step2','step3','step4','step5'].forEach(id => {
+        document.getElementById(id).classList.remove('active-step');
+        document.getElementById(id).classList.add('done');
+      });
+      result.innerHTML = `
+        <div class="alert alert-success">
+          <strong>✅ Pipeline Complete!</strong><br>
+          ${data.message}<br>
+          IBM Granite: <strong>${data.granite_enabled ? 'Active — AI-enhanced outputs' : 'Offline — Using built-in logic'}</strong>
+        </div>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table>
+            <thead><tr><th>Feedback ID</th><th>Category</th><th>Risk Level</th><th>Priority</th></tr></thead>
+            <tbody>
+              ${(data.results || []).map(r => `
+                <tr>
+                  <td><code>${r.feedback_id}</code></td>
+                  <td>${r.category}</td>
+                  <td>${riskBadge(r.risk_level)}</td>
+                  <td>${priorityBadge(r.priority)}</td>
+                </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--muted);">All records already processed.</td></tr>'}
+            </tbody>
+          </table>
+        </div>`;
+      toast('Pipeline complete! ' + data.processed + ' records processed.', 'success');
+    } catch (e) {
+      result.innerHTML = `<div class="alert alert-warning">❌ Error: ${e.message}</div>`;
+      toast('Pipeline error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '▶ Run Full Pipeline';
+    }
+  }
+
+  async function resetDatabase() {
+    if (!confirm('⚠️ This will delete ALL data and reset the database. Continue?')) return;
+    try {
+      await apiFetch('/api/reset', { method: 'DELETE' });
+      ['step1','step2','step3','step4','step5'].forEach(id => {
+        document.getElementById(id).classList.remove('done', 'active-step');
+      });
+      document.getElementById('pipelineResult').innerHTML = `<div class="alert alert-info">Database reset. Click <strong>Run Full Pipeline</strong> to start fresh.</div>`;
+      toast('Database reset successfully.', 'success');
+    } catch (e) {
+      toast('Reset error: ' + e.message, 'error');
+    }
+  }
+
+  // ===== FEEDBACK =====
+  async function loadFeedback() {
+    try {
+      allFeedback = await apiFetch('/api/feedback');
+      document.getElementById('feedbackCount').textContent = `${allFeedback.length} records`;
+      document.getElementById('feedbackBody').innerHTML = allFeedback.length === 0
+        ? '<tr><td colspan="7">' + emptyState('No feedback loaded', 'Run the pipeline to load feedback records.') + '</td></tr>'
+        : allFeedback.map(r => `
+            <tr>
+              <td><code style="font-size:0.78rem;">${r.feedback_id}</code></td>
+              <td style="white-space:nowrap; font-size:0.8rem;">${r.submission_date || '—'}</td>
+              <td style="font-size:0.8rem;">${r.department}</td>
+              <td class="truncate" title="${esc(r.feedback_text)}" style="font-size:0.8rem; font-style:italic;">"${esc(r.feedback_text.substring(0,90))}..."</td>
+              <td style="font-size:0.8rem;">${r.contact_method || '—'}</td>
+              <td>${qualityBadge(r)}</td>
+              <td><button class="btn btn-secondary btn-sm" onclick="openCaseModal('${r.feedback_id}')">View</button></td>
+            </tr>`).join('');
+    } catch (e) {
+      document.getElementById('feedbackBody').innerHTML = `<tr><td colspan="7" style="color:var(--critical); padding:20px;">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  // ===== ANALYSIS =====
+  async function loadAnalysis() {
+    try {
+      allAnalysis = await apiFetch('/api/analysis');
+      document.getElementById('analysisBody').innerHTML = allAnalysis.length === 0
+        ? '<tr><td colspan="8">' + emptyState('No analysis data', 'Run the pipeline to generate analysis.') + '</td></tr>'
+        : allAnalysis.map(r => `
+            <tr>
+              <td><code style="font-size:0.78rem;">${r.feedback_id}</code></td>
+              <td style="font-size:0.8rem;">${r.category}</td>
+              <td>${sentimentBadge(r.sentiment)}</td>
+              <td style="font-size:0.75rem; color:var(--muted);">${(r.themes || []).slice(0,2).join(', ') || '—'}</td>
+              <td class="truncate" style="font-size:0.8rem;" title="${esc(r.summary)}">${esc((r.summary||'').substring(0,80))}...</td>
+              <td>
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.8rem;">
+                  <div style="flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden;">
+                    <div style="height:100%; width:${Math.round((r.confidence_score||0)*100)}%; background:var(--accent); border-radius:3px;"></div>
+                  </div>
+                  ${Math.round((r.confidence_score||0)*100)}%
+                </div>
+              </td>
+              <td>${r.granite_enhanced ? '<span class="badge badge-approved">✓ AI</span>' : '<span class="badge badge-neutral">Built-in</span>'}</td>
+              <td><button class="btn btn-secondary btn-sm" onclick="openCaseModal('${r.feedback_id}')">View</button></td>
+            </tr>`).join('');
+    } catch (e) {
+      document.getElementById('analysisBody').innerHTML = `<tr><td colspan="8" style="color:var(--critical); padding:20px;">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  // ===== RISKS =====
+  async function loadRisks() {
+    try {
+      allRisks = await apiFetch('/api/risks');
+      document.getElementById('risksBody').innerHTML = allRisks.length === 0
+        ? '<tr><td colspan="6">' + emptyState('No risk data', 'Run the pipeline to generate risk flags.') + '</td></tr>'
+        : allRisks.map(r => `
+            <tr>
+              <td><code style="font-size:0.78rem;">${r.feedback_id}</code></td>
+              <td>${riskBadge(r.risk_level)}</td>
+              <td style="font-size:0.8rem;">${r.risk_type}</td>
+              <td class="truncate" style="font-size:0.8rem;" title="${esc(r.risk_description)}">${esc((r.risk_description||'').substring(0,100))}...</td>
+              <td>${r.requires_escalation
+                ? '<span class="badge badge-escalation">⚠️ YES</span>'
+                : '<span class="badge badge-low">No</span>'}</td>
+              <td><button class="btn btn-secondary btn-sm" onclick="openCaseModal('${r.feedback_id}')">View</button></td>
+            </tr>`).join('');
+    } catch (e) {
+      document.getElementById('risksBody').innerHTML = `<tr><td colspan="6" style="color:var(--critical); padding:20px;">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  // ===== PRIORITIES =====
+  async function loadPriorities() {
+    try {
+      allPriorities = await apiFetch('/api/priorities');
+      document.getElementById('prioritiesBody').innerHTML = allPriorities.length === 0
+        ? '<tr><td colspan="7">' + emptyState('No priority data', 'Run the pipeline to generate priorities.') + '</td></tr>'
+        : allPriorities.map((r, i) => `
+            <tr>
+              <td style="font-weight:700; color:var(--muted); font-size:0.85rem;">#${i+1}</td>
+              <td><code style="font-size:0.78rem;">${r.feedback_id}</code></td>
+              <td>${priorityBadge(r.priority_level)}</td>
+              <td>
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.8rem;">
+                  <div style="width:50px; height:6px; background:var(--border); border-radius:3px; overflow:hidden;">
+                    <div style="height:100%; width:${Math.min(100, r.priority_score)}%; background:${priorityColor(r.priority_level)}; border-radius:3px;"></div>
+                  </div>
+                  ${r.priority_score}
+                </div>
+              </td>
+              <td style="font-size:0.8rem;">${r.assigned_department}</td>
+              <td class="truncate" style="font-size:0.78rem; color:var(--muted);" title="${esc(r.priority_rationale)}">${esc((r.priority_rationale||'').substring(0,90))}...</td>
+              <td><button class="btn btn-secondary btn-sm" onclick="openCaseModal('${r.feedback_id}')">View</button></td>
+            </tr>`).join('');
+    } catch (e) {
+      document.getElementById('prioritiesBody').innerHTML = `<tr><td colspan="7" style="color:var(--critical); padding:20px;">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  function priorityColor(p) {
+    return { 'P1-Critical': '#c0392b', 'P2-High': '#d35400', 'P3-Medium': '#d4a017', 'P4-Low': '#27ae60' }[p] || '#1a56db';
+  }
+
+  // ===== RECOVERY =====
+  async function loadRecovery() {
+    try {
+      allRecovery = await apiFetch('/api/recovery');
+      document.getElementById('recoveryBody').innerHTML = allRecovery.length === 0
+        ? '<tr><td colspan="6">' + emptyState('No recovery plans', 'Run the pipeline to generate plans.') + '</td></tr>'
+        : allRecovery.map(r => `
+            <tr>
+              <td><code style="font-size:0.78rem;">${r.feedback_id}</code></td>
+              <td>${statusBadge(r.status)}</td>
+              <td style="font-size:0.8rem;">${r.responsible_role}</td>
+              <td style="font-size:0.8rem; white-space:nowrap;">${r.timeline_days} day${r.timeline_days !== 1 ? 's' : ''}</td>
+              <td class="truncate" style="font-size:0.8rem;" title="${esc(r.recommended_action)}">${esc((r.recommended_action||'').substring(0,90))}...</td>
+              <td style="white-space:nowrap;">
+                <button class="btn btn-secondary btn-sm" onclick="openCaseModal('${r.feedback_id}')">View</button>
+                ${r.status === 'Pending Review'
+                  ? `<button class="btn btn-primary btn-sm" style="margin-left:4px;" onclick="openReviewModal('${r.feedback_id}')">Review</button>`
+                  : ''}
+              </td>
+            </tr>`).join('');
+    } catch (e) {
+      document.getElementById('recoveryBody').innerHTML = `<tr><td colspan="6" style="color:var(--critical); padding:20px;">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  // ===== HUMAN REVIEW =====
+  async function loadReview() {
+    try {
+      const [recovery, priorities, risks, reviews] = await Promise.all([
+        apiFetch('/api/recovery'),
+        apiFetch('/api/priorities'),
+        apiFetch('/api/risks'),
+        apiFetch('/api/reviews'),
+      ]);
+      allReviews = reviews;
+
+      const priMap = Object.fromEntries(priorities.map(p => [p.feedback_id, p]));
+      const riskMap = Object.fromEntries(risks.map(r => [r.feedback_id, r]));
+      const reviewedIds = new Set(reviews.map(r => r.feedback_id));
+
+      const pending = recovery.filter(r => r.status === 'Pending Review');
+
+      document.getElementById('reviewBody').innerHTML = pending.length === 0
+        ? '<tr><td colspan="6">' + emptyState('🎉 All caught up!', 'No plans awaiting review.') + '</td></tr>'
+        : pending.map(r => {
+            const pri = priMap[r.feedback_id];
+            const risk = riskMap[r.feedback_id];
+            return `
+              <tr>
+                <td><code style="font-size:0.78rem;">${r.feedback_id}</code></td>
+                <td style="font-size:0.8rem;">${pri ? pri.assigned_department : '—'}</td>
+                <td>${pri ? priorityBadge(pri.priority_level) : '—'}</td>
+                <td>${risk ? riskBadge(risk.risk_level) : '—'}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td>
+                  <button class="btn btn-primary btn-sm" onclick="openReviewModal('${r.feedback_id}')">Review</button>
+                </td>
+              </tr>`;
+          }).join('');
+
+      // Completed reviews
+      document.getElementById('completedReviewBody').innerHTML = reviews.length === 0
+        ? '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:20px;">No reviews completed yet.</td></tr>'
+        : reviews.map(r => `
+            <tr>
+              <td><code style="font-size:0.78rem;">${r.feedback_id}</code></td>
+              <td style="font-size:0.8rem;">${r.reviewer_name}</td>
+              <td>${statusBadge(r.decision)}</td>
+              <td class="truncate" style="font-size:0.8rem; color:var(--muted);">${esc(r.reviewer_notes || '—')}</td>
+              <td style="font-size:0.78rem; color:var(--muted); white-space:nowrap;">${r.reviewed_at ? r.reviewed_at.substring(0,19).replace('T',' ') : '—'}</td>
+            </tr>`).join('');
+    } catch (e) {
+      document.getElementById('reviewBody').innerHTML = `<tr><td colspan="6" style="color:var(--critical); padding:20px;">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  // ===== REPORT =====
+  async function loadReport() {
+    try {
+      const r = await apiFetch('/api/report');
+      const s = r.summary;
+      document.getElementById('reportContent').innerHTML = `
+        <div class="card">
+          <div class="card-header"><h3>📄 Consolidated Audit Report</h3>
+            <span style="font-size:0.78rem; color:var(--muted);">Generated: ${r.generated_at.substring(0,19).replace('T',' ')} UTC</span>
+          </div>
+          <div class="card-body">
+            <div class="tabs">
+              <button class="tab-btn active" onclick="switchTab(event,'tab-summary')">Summary</button>
+              <button class="tab-btn" onclick="switchTab(event,'tab-themes')">Themes & Priorities</button>
+              <button class="tab-btn" onclick="switchTab(event,'tab-ai')">AI Limitations</button>
+            </div>
+
+            <div class="tab-panel active" id="tab-summary">
+              <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+                ${Object.entries(s).map(([k, v]) => `
+                  <div class="stat-card">
+                    <div class="label">${k.replace(/_/g,' ')}</div>
+                    <div class="value" style="font-size:1.5rem; color:var(--accent);">${v}</div>
+                  </div>`).join('')}
+              </div>
+            </div>
+
+            <div class="tab-panel" id="tab-themes">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                <div>
+                  <h4 style="font-size:0.875rem; font-weight:700; margin-bottom:10px;">Theme Distribution</h4>
+                  ${Object.entries(r.theme_distribution || {}).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `
+                    <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border); font-size:0.8rem;">
+                      <span>${k}</span><strong>${v}</strong>
+                    </div>`).join('') || '<p style="color:var(--muted);">No data.</p>'}
+                </div>
+                <div>
+                  <h4 style="font-size:0.875rem; font-weight:700; margin-bottom:10px;">Priority Distribution</h4>
+                  ${Object.entries(r.priority_distribution || {}).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v]) => `
+                    <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border); font-size:0.8rem;">
+                      <span>${priorityBadge(k)}</span><strong>${v}</strong>
+                    </div>`).join('') || '<p style="color:var(--muted);">No data.</p>'}
+                  <h4 style="font-size:0.875rem; font-weight:700; margin-bottom:10px; margin-top:16px;">Review Decisions</h4>
+                  ${Object.entries(r.review_decisions || {}).map(([k,v]) => `
+                    <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border); font-size:0.8rem;">
+                      <span>${statusBadge(k)}</span><strong>${v}</strong>
+                    </div>`).join('') || '<p style="color:var(--muted);">No reviews completed.</p>'}
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-panel" id="tab-ai">
+              <div class="alert alert-info" style="margin-bottom:16px;">
+                <strong>Responsible AI Statement:</strong><br>${r.responsible_ai_statement}
+              </div>
+              <h4 style="font-size:0.875rem; font-weight:700; margin-bottom:10px;">AI System Limitations</h4>
+              <ul class="limitation-list">
+                ${(r.ai_limitations || []).map(l => `<li>${l}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        </div>`;
+    } catch (e) {
+      document.getElementById('reportContent').innerHTML = `<div class="alert alert-warning">Could not load report. Run the pipeline first. (${e.message})</div>`;
+    }
+  }
+
+  function switchTab(e, tabId) {
+    const card = e.target.closest('.card-body');
+    card.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    card.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    e.target.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+  }
+
+  // ===== AUDIT =====
+  async function loadAudit() {
+    try {
+      const logs = await apiFetch('/api/audit');
+      document.getElementById('auditBody').innerHTML = logs.length === 0
+        ? '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:20px;">No audit entries. Run pipeline first.</td></tr>'
+        : logs.map(l => `
+            <tr>
+              <td style="font-size:0.75rem; color:var(--muted); white-space:nowrap;">${l.timestamp ? l.timestamp.substring(0,19).replace('T',' ') : '—'}</td>
+              <td><code style="font-size:0.75rem;">${l.feedback_id}</code></td>
+              <td style="font-size:0.78rem; font-weight:600;">${l.agent_name}</td>
+              <td style="font-size:0.8rem;">${esc(l.action)}</td>
+              <td class="truncate" style="font-size:0.78rem; color:var(--muted);" title="${esc(l.details)}">${esc((l.details||'').substring(0,60))}</td>
+            </tr>`).join('');
+    } catch (e) {
+      document.getElementById('auditBody').innerHTML = `<tr><td colspan="5" style="color:var(--critical); padding:20px;">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  // ===== CASE DETAIL MODAL =====
+  async function openCaseModal(feedbackId) {
+    document.getElementById('modalTitle').textContent = `Case: ${feedbackId}`;
+    document.getElementById('modalBadges').innerHTML = '';
+    document.getElementById('modalBody').innerHTML = '<div class="loading"><div class="spinner"></div>Loading case file...</div>';
+    document.getElementById('modalFooter').innerHTML = '';
+    document.getElementById('caseModal').classList.add('open');
+
+    try {
+      const c = await apiFetch(`/api/feedback/${feedbackId}`);
+
+      const badges = [];
+      if (c.risk) badges.push(riskBadge(c.risk.risk_level));
+      if (c.priority) badges.push(priorityBadge(c.priority.priority_level));
+      if (c.recovery_plan) badges.push(statusBadge(c.recovery_plan.status));
+      if (c.risk?.requires_escalation) badges.push('<span class="badge badge-escalation">⚠️ Escalation Required</span>');
+      document.getElementById('modalBadges').innerHTML = badges.join('');
+
+      let html = '';
+
+      // Escalation banner
+      if (c.risk?.requires_escalation) {
+        html += `<div class="escalation-banner">⚠️ This case requires escalation to an authorised reviewer or patient safety officer.</div>`;
+      }
+
+      // Feedback
+      html += `<div class="detail-section">
+        <h4>📋 Patient Feedback</h4>
+        <div class="detail-grid" style="margin-bottom:10px;">
+          <div class="detail-field"><label>Feedback ID</label><div class="val"><code>${c.feedback.feedback_id}</code></div></div>
+          <div class="detail-field"><label>Date</label><div class="val">${c.feedback.submission_date || '—'}</div></div>
+          <div class="detail-field"><label>Department</label><div class="val">${c.feedback.department}</div></div>
+          <div class="detail-field"><label>Contact Method</label><div class="val">${c.feedback.contact_method || '—'}</div></div>
+        </div>
+        <div class="feedback-text-box">"${esc(c.feedback.feedback_text)}"</div>
+        ${c.feedback.data_quality_notes !== 'OK' ? `<p style="font-size:0.78rem; color:var(--high); margin-top:6px;">⚠️ Quality Note: ${esc(c.feedback.data_quality_notes)}</p>` : ''}
+      </div>`;
+
+      // Analysis
+      if (c.analysis) {
+        html += `<div class="detail-section">
+          <h4>🔬 Analysis Results</h4>
+          <div class="detail-grid">
+            <div class="detail-field"><label>Category</label><div class="val"><strong>${c.analysis.category}</strong></div></div>
+            <div class="detail-field"><label>Sentiment</label><div class="val">${sentimentBadge(c.analysis.sentiment)}</div></div>
+            <div class="detail-field"><label>Confidence</label><div class="val">${Math.round((c.analysis.confidence_score||0)*100)}%</div></div>
+            <div class="detail-field"><label>IBM Granite</label><div class="val">${c.analysis.granite_enhanced ? '<span class="badge badge-approved">AI Enhanced</span>' : '<span class="badge badge-neutral">Built-in</span>'}</div></div>
+          </div>
+          <div class="detail-field" style="margin-top:10px;"><label>Summary</label><div class="val" style="font-style:italic; color:var(--muted);">${esc(c.analysis.summary)}</div></div>
+          ${c.analysis.themes.length ? `<div class="detail-field" style="margin-top:8px;"><label>Themes</label><div class="val">${c.analysis.themes.map(t => `<span class="badge badge-neutral" style="margin-right:4px;">${t}</span>`).join('')}</div></div>` : ''}
+        </div>`;
+      }
+
+      // Risk
+      if (c.risk) {
+        html += `<div class="detail-section">
+          <h4>⚠️ Risk Assessment</h4>
+          <div class="detail-grid">
+            <div class="detail-field"><label>Risk Level</label><div class="val">${riskBadge(c.risk.risk_level)}</div></div>
+            <div class="detail-field"><label>Risk Type</label><div class="val">${c.risk.risk_type}</div></div>
+          </div>
+          <div class="detail-field" style="margin-top:8px;"><label>Description</label><div class="val" style="font-size:0.85rem; color:var(--muted);">${esc(c.risk.risk_description)}</div></div>
+        </div>`;
+      }
+
+      // Priority
+      if (c.priority) {
+        html += `<div class="detail-section">
+          <h4>📋 Prioritisation</h4>
+          <div class="detail-grid">
+            <div class="detail-field"><label>Priority Level</label><div class="val">${priorityBadge(c.priority.priority_level)}</div></div>
+            <div class="detail-field"><label>Score</label><div class="val"><strong>${c.priority.priority_score}</strong></div></div>
+          </div>
+          <div class="detail-field" style="margin-top:8px;"><label>Rationale</label><div class="val" style="font-size:0.82rem; color:var(--muted);">${esc(c.priority.priority_rationale)}</div></div>
+        </div>`;
+      }
+
+      // Recovery Plan
+      if (c.recovery_plan) {
+        html += `<div class="detail-section">
+          <h4>💡 Recovery Plan</h4>
+          <div class="empathy-box" style="margin-bottom:12px;">${esc(c.recovery_plan.empathy_statement)}</div>
+          <div class="detail-grid">
+            <div class="detail-field"><label>Status</label><div class="val">${statusBadge(c.recovery_plan.status)}</div></div>
+            <div class="detail-field"><label>Timeline</label><div class="val">${c.recovery_plan.timeline_days} day${c.recovery_plan.timeline_days !== 1 ? 's' : ''}</div></div>
+            <div class="detail-field" style="grid-column:1/-1;"><label>Responsible Role</label><div class="val">${c.recovery_plan.responsible_role}</div></div>
+          </div>
+          <div class="detail-field" style="margin-top:10px;"><label>Recommended Action</label>
+            <div class="val" style="font-size:0.85rem; background:var(--surface2); padding:10px; border-radius:var(--radius); border:1px solid var(--border);">${esc(c.recovery_plan.recommended_action)}</div>
+          </div>
+          <div class="detail-field" style="margin-top:10px;"><label>Follow-Up Steps</label>
+            <div class="val" style="font-size:0.82rem; color:var(--muted);">${esc(c.recovery_plan.follow_up_steps)}</div>
+          </div>
+        </div>`;
+      }
+
+      // Human Review
+      if (c.human_review && c.human_review.decision) {
+        html += `<div class="detail-section">
+          <h4>👤 Human Review Decision</h4>
+          <div class="detail-grid">
+            <div class="detail-field"><label>Decision</label><div class="val">${statusBadge(c.human_review.decision)}</div></div>
+            <div class="detail-field"><label>Reviewer</label><div class="val">${c.human_review.reviewer_name}</div></div>
+            <div class="detail-field"><label>Reviewed At</label><div class="val" style="font-size:0.8rem;">${c.human_review.reviewed_at ? c.human_review.reviewed_at.substring(0,19).replace('T',' ') : '—'}</div></div>
+          </div>
+          ${c.human_review.reviewer_notes ? `<div class="detail-field" style="margin-top:8px;"><label>Notes</label><div class="val" style="font-size:0.85rem; color:var(--muted);">${esc(c.human_review.reviewer_notes)}</div></div>` : ''}
+          ${c.human_review.modified_action ? `<div class="detail-field" style="margin-top:8px;"><label>Modified Action</label><div class="val" style="font-size:0.85rem;">${esc(c.human_review.modified_action)}</div></div>` : ''}
+        </div>`;
+      }
+
+      document.getElementById('modalBody').innerHTML = html;
+
+      // Footer action button
+      if (c.recovery_plan && c.recovery_plan.status === 'Pending Review') {
+        document.getElementById('modalFooter').innerHTML = `
+          <button class="btn btn-secondary" onclick="closeModal('caseModal')">Close</button>
+          <button class="btn btn-primary" onclick="closeModal('caseModal'); openReviewModal('${feedbackId}')">Review This Case</button>`;
+      } else {
+        document.getElementById('modalFooter').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('caseModal')">Close</button>`;
+      }
+
+    } catch (e) {
+      document.getElementById('modalBody').innerHTML = `<div class="alert alert-warning">Error loading case: ${e.message}</div>`;
+    }
+  }
+
+  // ===== REVIEW MODAL =====
+  async function openReviewModal(feedbackId) {
+    document.getElementById('reviewFeedbackId').value = feedbackId;
+    document.getElementById('reviewModalSubtitle').textContent = `Feedback ID: ${feedbackId}`;
+    document.getElementById('reviewerName').value = '';
+    document.getElementById('reviewDecision').value = '';
+    document.getElementById('reviewerNotes').value = '';
+    document.getElementById('modifiedAction').value = '';
+    document.getElementById('modifiedActionGroup').style.display = 'none';
+
+    // Load plan preview
+    document.getElementById('reviewPlanPreview').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    document.getElementById('reviewModal').classList.add('open');
+
+    try {
+      const c = await apiFetch(`/api/feedback/${feedbackId}`);
+      if (c.recovery_plan) {
+        document.getElementById('reviewPlanPreview').innerHTML = `
+          <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:14px;">
+            <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">AI-Generated Recovery Plan</div>
+            <div class="empathy-box" style="margin-bottom:10px;">${esc(c.recovery_plan.empathy_statement)}</div>
+            <strong style="font-size:0.82rem;">Recommended Action:</strong>
+            <p style="font-size:0.82rem; margin-top:4px; color:var(--muted);">${esc(c.recovery_plan.recommended_action)}</p>
+            <strong style="font-size:0.82rem;">Responsible:</strong>
+            <p style="font-size:0.82rem; margin-top:4px; color:var(--muted);">${c.recovery_plan.responsible_role}</p>
+          </div>`;
+        document.getElementById('modifiedAction').value = c.recovery_plan.recommended_action;
+      }
+    } catch (e) {
+      document.getElementById('reviewPlanPreview').innerHTML = `<p style="color:var(--muted);">Could not load plan preview.</p>`;
+    }
+  }
+
+  function onDecisionChange() {
+    const dec = document.getElementById('reviewDecision').value;
+    document.getElementById('modifiedActionGroup').style.display = dec === 'Modified' ? 'block' : 'none';
+  }
+
+  async function submitReview(e) {
+    e.preventDefault();
+    const feedbackId = document.getElementById('reviewFeedbackId').value;
+    const payload = {
+      reviewer_name: document.getElementById('reviewerName').value,
+      decision: document.getElementById('reviewDecision').value,
+      reviewer_notes: document.getElementById('reviewerNotes').value,
+      modified_action: document.getElementById('modifiedAction').value,
+    };
+    try {
+      await apiFetch(`/api/review/${feedbackId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      closeModal('reviewModal');
+      toast(`Review submitted for ${feedbackId}: ${payload.decision}`, 'success');
+      await loadReview();
+      if (currentPage === 'recovery') await loadRecovery();
+    } catch (e) {
+      toast('Error submitting review: ' + e.message, 'error');
+    }
+  }
+
+  // ===== UTILITIES =====
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function emptyState(title, msg) {
+    return `<div class="empty-state"><div class="icon">📭</div><h3>${title}</h3><p>${msg}</p></div>`;
+  }
+
+  // ===== KEYBOARD =====
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+    }
+  });
+
+  // ===== INIT =====
+  window.addEventListener('DOMContentLoaded', async () => {
+    await loadDashboard();
+  });
+</script>
+</body>
+</html>
